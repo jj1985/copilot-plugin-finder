@@ -1,0 +1,20 @@
+# Golden recall set: repositories that MUST be present after every scan of the
+# copilot-authored group. A miss fails the scan. Add to it freely.
+# `expect` is the minimum evidence level: verified-root | verified-nested | declared-only
+repos:
+  - { repo: github/awesome-copilot, expect: verified-root, why: built-in default marketplace }
+  - { repo: github/copilot-plugins, expect: verified-root, why: documented marketplace }
+  - { repo: microsoft/skills, expect: verified-root, why: large Microsoft marketplace }
+  - { repo: microsoft/skills-for-fabric, expect: verified-root }
+  - { repo: microsoft/work-iq, expect: verified-root, why: root marketplace.json example }
+  - { repo: microsoft/power-platform-skills, expect: verified-root }
+  - { repo: upstash/context7, expect: verified-root }
+  - { repo: ChromeDevTools/chrome-devtools-mcp, expect: verified-root }
+  - { repo: dotnet/skills, expect: verified-root, why: referenced by dotnet settings.json }
+  - { repo: OpenHands/extensions, expect: verified-root, why: .plugin/ location }
+  - { repo: Azure/azure-functions-skills, expect: verified-root, why: .plugin/ location }
+  - { repo: vercel/vercel-plugin, expect: verified-root, why: .plugin/plugin.json }
+  - { repo: brunoborges/jvm-pulse, expect: verified-root, why: legacy plugin with extensions }
+  - { repo: Redth/mobile-canvas-ghcp, expect: verified-root }
+  - { repo: jj1985/archer-irm-skills, expect: verified-root, why: user's own dual-format marketplace }
+  - { repo: jj1985/plextrac-skills, expect: verified-root, why: user's own dual-format marketplace }

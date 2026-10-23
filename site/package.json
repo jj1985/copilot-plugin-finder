@@ -1,0 +1,21 @@
+{
+  "name": "cpf-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tanstack/table-core": "^8.21.3",
+    "@tanstack/virtual-core": "^3.13.12",
+    "chart.js": "^4.5.0",
+    "minisearch": "^7.1.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

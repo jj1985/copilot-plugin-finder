@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- CSP -->
+    <meta name="color-scheme" content="light dark" />
+    <title>Copilot Plugin Finder</title>
+    <meta name="description" content="A census of GitHub repositories that GitHub Copilot can install as plugins or register as plugin marketplaces." />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <h1>Copilot Plugin Finder</h1>
+          <p id="tagline" class="muted">Loading…</p>
+        </div>
+        <nav class="tabs" role="tablist" aria-label="Views">
+          <button class="tab" role="tab" data-tab="repos" aria-selected="true">Repositories</button>
+          <button class="tab" role="tab" data-tab="plugins" aria-selected="false">Plugins</button>
+          <button class="tab" role="tab" data-tab="about" aria-selected="false">About the data</button>
+        </nav>
+        <div id="scanbadge" class="scanbadge" title="Last scan"></div>
+      </header>
+      <main id="main"></main>
+      <aside id="detail" class="detail" aria-hidden="true" aria-label="Repository details" role="dialog"></aside>
+      <div id="backdrop" class="backdrop" hidden></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

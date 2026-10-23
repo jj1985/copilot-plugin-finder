@@ -1,0 +1,100 @@
+name: nightly scan and site
+
+on:
+  schedule:
+    - cron: "17 3 * * *"   # 03:17 UTC nightly
+  workflow_dispatch:
+    inputs:
+      group:
+        description: "marker groups (comma-separated)"
+        default: "copilot-authored,pointers"
+
+concurrency:
+  group: cpf-scan
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Restore database
+        uses: actions/cache/restore@v4
+        with:
+          path: data/index.sqlite
+          key: cpf-db-${{ github.run_id }}
+          restore-keys: cpf-db-
+
+      - name: Install
+        run: uv sync --group dev
+
+      - name: Test
+        run: uv run pytest -q
+
+      - name: Scan (discover, verify, expand, golden, dedup, export)
+        env:
+          # Fine-grained PAT (public read). GITHUB_TOKEN is the fallback; whether it may call search/code is untested (PLAN.md Q3).
+          GITHUB_TOKEN: ${{ secrets.CPF_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          PYTHONUTF8: "1"
+        run: uv run cpf scan --group "${{ github.event.inputs.group || 'copilot-authored,pointers' }}" | tee data/scan-summary.json
+
+      - name: Site data
+        env:
+          PYTHONUTF8: "1"
+        run: uv run cpf site
+
+      - name: Build site
+        working-directory: site
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Save database
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/index.sqlite
+          key: cpf-db-${{ github.run_id }}
+
+      - name: Upload exports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpf-export-${{ github.run_id }}
+          path: |
+            data/export/
+            data/scan-summary.json
+            docs/dedup-audit.md
+          retention-days: 30
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: scan
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

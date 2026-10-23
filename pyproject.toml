@@ -1,0 +1,26 @@
+[project]
+name = "cpf"
+version = "0.1.0"
+description = "Copilot Plugin Finder: census of GitHub repos that Copilot can install as plugins or marketplaces"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "jsonschema>=4.21",
+]
+
+[project.scripts]
+cpf = "cpf.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["scanner/cpf"]
+
+[tool.pytest.ini_options]
+testpaths = ["scanner/tests"]

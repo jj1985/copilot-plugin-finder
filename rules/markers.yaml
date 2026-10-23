@@ -1,0 +1,105 @@
+# Marker families for Copilot plugin / marketplace discovery.
+# Each family is one GitHub code-search query. Hits are accepted only when the
+# file path matches `path_regex` exactly (code search's `filename:` is fuzzy and
+# `path:DIR` matches subdirectories). `group` drives scan cadence.
+version: 2
+max_hits_per_slice: 950
+size_axis:
+  min: 0
+  max: 400000
+groups:
+  copilot-authored: { cadence_nights: 1 }
+  claude-format: { cadence_nights: 3 }
+  pointers: { cadence_nights: 1 }
+
+families:
+  - id: M-GH
+    group: copilot-authored
+    kind: marketplace
+    query: 'path:/.github/plugin filename:marketplace.json'
+    path_regex: '^\.github/plugin/marketplace\.json$'
+    forks: true
+
+  - id: M-PL
+    group: copilot-authored
+    kind: marketplace
+    query: 'path:/.plugin filename:marketplace.json'
+    path_regex: '^\.plugin/marketplace\.json$'
+    forks: true
+
+  - id: M-ROOT
+    group: copilot-authored
+    kind: marketplace
+    query: 'path:/ filename:marketplace.json plugins owner'
+    path_regex: '^marketplace\.json$'
+    forks: true
+
+  - id: P-AP
+    group: copilot-authored
+    kind: plugin
+    query: 'path:/ filename:plugin.json agent-plugins.org'
+    path_regex: '^plugin\.json$'
+    forks: true
+
+  - id: P-GH
+    group: copilot-authored
+    kind: plugin
+    query: 'path:/.github/plugin filename:plugin.json'
+    path_regex: '^\.github/plugin/plugin\.json$'
+    forks: true
+
+  - id: P-PL
+    group: copilot-authored
+    kind: plugin
+    query: 'path:/.plugin filename:plugin.json'
+    path_regex: '^\.plugin/plugin\.json$'
+    forks: true
+
+  - id: M-CL
+    group: claude-format
+    kind: marketplace
+    query: 'path:/.claude-plugin filename:marketplace.json'
+    path_regex: '^\.claude-plugin/marketplace\.json$'
+    forks: true
+    slice_axes: [size, term, owner]
+
+  - id: P-CL
+    group: claude-format
+    kind: plugin
+    query: 'path:/.claude-plugin filename:plugin.json'
+    path_regex: '^\.claude-plugin/plugin\.json$'
+    forks: true
+    slice_axes: [size, term, owner]
+
+  # Consumer-side pointers: the repo is an adopter; the repos it names are marketplaces by declaration.
+  - id: S-SET
+    group: pointers
+    kind: pointer
+    query: 'path:/.github/copilot filename:settings.json extraKnownMarketplaces'
+    path_regex: '^\.github/copilot/settings\.json$'
+    forks: false
+
+  - id: S-SET-CL
+    group: pointers
+    kind: pointer
+    query: 'path:/.claude filename:settings.json extraKnownMarketplaces'
+    path_regex: '^\.claude/settings\.json$'
+    forks: false
+    slice_axes: [size, term, owner]
+
+  - id: S-VSC
+    group: pointers
+    kind: pointer
+    query: 'path:/.vscode filename:settings.json "chat.plugins.marketplaces"'
+    path_regex: '^\.vscode/settings\.json$'
+    forks: false
+
+# Content terms used to split a size bucket that is still over the cap
+# (same-template manifests share one byte size). Each term yields two slices:
+# `q term` and `q NOT term`.
+term_axis:
+  - 'strict'
+  - 'mcpServers'
+  - 'keywords'
+  - 'category'
+  - 'homepage'

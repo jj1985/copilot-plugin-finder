@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write   # upload the database snapshot to the data-latest release
   pages: write
   id-token: write
 
@@ -42,6 +42,18 @@ jobs:
           key: cpf-db-${{ github.run_id }}
           restore-keys: cpf-db-
 
+      - name: Bootstrap database from the data-latest release when the cache is empty
+        if: hashFiles('data/index.sqlite') == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data
+          if gh release download data-latest --repo "${{ github.repository }}" --pattern index.sqlite --dir data; then
+            echo "seeded data/index.sqlite from the data-latest release ($(du -h data/index.sqlite | cut -f1))"
+          else
+            echo "no data-latest release; starting from an empty database"
+          fi
+
       - name: Install
         run: uv sync --group dev
 
@@ -50,10 +62,20 @@ jobs:
 
       - name: Scan (discover, verify, expand, golden, dedup, export)
         env:
-          # Fine-grained PAT (public read). GITHUB_TOKEN is the fallback; whether it may call search/code is untested (PLAN.md Q3).
+          # A fine-grained PAT (public read) is required for discovery: with the default GITHUB_TOKEN,
+          # code search answers with retry-after 736 s per request and GraphQL is capped at 1,000 points/h
+          # (measured 2026-10-23). Without the PAT the run refreshes the seeded database only.
+          CPF_PAT: ${{ secrets.CPF_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.CPF_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           PYTHONUTF8: "1"
-        run: uv run cpf scan --group "${{ github.event.inputs.group || 'copilot-authored,pointers' }}" | tee data/scan-summary.json
+        run: |
+          if [ -n "$CPF_PAT" ]; then
+            echo "using CPF_GITHUB_TOKEN: full scan (discover + refresh)"
+            uv run cpf scan --group "${{ github.event.inputs.group || 'copilot-authored,pointers' }}" | tee data/scan-summary.json
+          else
+            echo "no CPF_GITHUB_TOKEN secret: refresh-only run (no code search)"
+            uv run cpf scan --no-discover | tee data/scan-summary.json
+          fi
 
       - name: Site data
         env:
@@ -72,6 +94,23 @@ jobs:
         with:
           path: data/index.sqlite
           key: cpf-db-${{ github.run_id }}
+
+      - name: Publish database snapshot to the data-latest release
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'EOF'
+          import sqlite3
+          c = sqlite3.connect("data/index.sqlite")
+          c.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+          c.execute("VACUUM INTO 'data/index-snapshot.sqlite'")
+          c.close()
+          EOF
+          mv data/index-snapshot.sqlite index.sqlite
+          gh release view data-latest --repo "${{ github.repository }}" >/dev/null 2>&1 \
+            || gh release create data-latest --repo "${{ github.repository }}" --title "Database snapshot (rolling)" --notes "Rolling SQLite snapshot written by the nightly scan; used to seed new runners." --latest=false
+          gh release upload data-latest index.sqlite --repo "${{ github.repository }}" --clobber
 
       - name: Upload exports
         if: always()

@@ -184,9 +184,13 @@ def cmd_scan(args: argparse.Namespace) -> int:
     conn = connect(s.db_path)
     gh = GitHub(s.get_token())
     scan_id = start_scan(conn, "scan")
-    fams = _families(rules, args)
-    d = Discoverer(gh, conn, rules, scan_id, max_requests=args.max_requests)
-    dsum = d.run(fams, forks=not args.no_forks)
+    from .discover import Summary as DSummary
+    if args.no_discover:
+        dsum = DSummary()  # refresh-only run: no code search (e.g. no PAT available in CI)
+    else:
+        fams = _families(rules, args)
+        d = Discoverer(gh, conn, rules, scan_id, max_requests=args.max_requests)
+        dsum = d.run(fams, forks=not args.no_forks)
     v = Verifier(gh, conn, scan_id)
     v.verify_pending(limit=args.limit)
     esum = Expander(conn, v, scan_id).run(max_rounds=2) if not args.no_expand else None
@@ -264,6 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     add_select(sp)
     sp.add_argument("--limit", type=int, help="max repos to verify")
     sp.add_argument("--no-expand", action="store_true")
+    sp.add_argument("--no-discover", action="store_true", help="skip code search; refresh, expand, dedup and export only")
     sp.set_defaults(func=cmd_scan)
 
     args = p.parse_args(argv)
